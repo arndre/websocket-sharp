@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 /*
  * WebSocket.cs
  *
@@ -1886,7 +1886,33 @@ namespace WebSocketSharp
       }
     }
 
-    private bool send (Opcode opcode, Stream stream, bool compressed)
+      private bool sendUncompressed(Opcode opcode, Stream stream)
+      {
+         lock (_forSend)
+         {
+            var src = stream;
+            var sent = false;
+            try
+            {
+               sent = send(opcode, stream, false);
+               if (!sent)
+                  error("A send has been interrupted.", null);
+            }
+            catch (Exception ex)
+            {
+               _logger.Error(ex.ToString());
+               error("An error has occurred during a send.", ex);
+            }
+            finally
+            {
+               src.Dispose();
+            }
+
+            return sent;
+         }
+      }
+
+      private bool send (Opcode opcode, Stream stream, bool compressed)
     {
       var len = stream.Length;
       if (len == 0)
@@ -1974,7 +2000,33 @@ namespace WebSocketSharp
       );
     }
 
-    private bool sendBytes (byte[] bytes)
+      private void sendAsyncUncompressed(Opcode opcode, Stream stream, Action<bool> completed)
+      {
+         Func<Opcode, Stream, bool> sender = sendUncompressed;
+         sender.BeginInvoke(
+           opcode,
+           stream,
+           ar => {
+              try
+              {
+                 var sent = sender.EndInvoke(ar);
+                 if (completed != null)
+                    completed(sent);
+              }
+              catch (Exception ex)
+              {
+                 _logger.Error(ex.ToString());
+                 error(
+                "An error has occurred during the callback for an async send.",
+                ex
+              );
+              }
+           },
+           null
+         );
+      }
+
+      private bool sendBytes (byte[] bytes)
     {
       try {
         _stream.Write (bytes, 0, bytes.Length);
@@ -3573,52 +3625,70 @@ namespace WebSocketSharp
 
       sendAsync (Opcode.Binary, new MemoryStream (data), completed);
     }
+      /// <summary>
+      /// Sends the specified  data asynchronously forced uncompressed using the WebSocket connection.
+      /// </summary>
+      /// <param name="data"></param>
+      /// <param name="completed"></param>
+      public void SendAsyncUncompressed(byte[] data, Action<bool> completed)
+      {
+         if (_readyState != WebSocketState.Open)
+         {
+            var msg = "The current state of the connection is not Open.";
+            throw new InvalidOperationException(msg);
+         }
 
-    /// <summary>
-    /// Sends the specified file asynchronously using the WebSocket connection.
-    /// </summary>
-    /// <remarks>
-    /// This method does not wait for the send to be complete.
-    /// </remarks>
-    /// <param name="fileInfo">
-    ///   <para>
-    ///   A <see cref="FileInfo"/> that specifies the file to send.
-    ///   </para>
-    ///   <para>
-    ///   The file is sent as the binary data.
-    ///   </para>
-    /// </param>
-    /// <param name="completed">
-    ///   <para>
-    ///   An <c>Action&lt;bool&gt;</c> delegate or <see langword="null"/>
-    ///   if not needed.
-    ///   </para>
-    ///   <para>
-    ///   The delegate invokes the method called when the send is complete.
-    ///   </para>
-    ///   <para>
-    ///   <c>true</c> is passed to the method if the send has done with
-    ///   no error; otherwise, <c>false</c>.
-    ///   </para>
-    /// </param>
-    /// <exception cref="InvalidOperationException">
-    /// The current state of the connection is not Open.
-    /// </exception>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="fileInfo"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ArgumentException">
-    ///   <para>
-    ///   The file does not exist.
-    ///   </para>
-    ///   <para>
-    ///   -or-
-    ///   </para>
-    ///   <para>
-    ///   The file could not be opened.
-    ///   </para>
-    /// </exception>
-    public void SendAsync (FileInfo fileInfo, Action<bool> completed)
+         if (data == null)
+            throw new ArgumentNullException("data");
+
+         sendAsyncUncompressed(Opcode.Binary, new MemoryStream(data), completed);
+      }
+
+      /// <summary>
+      /// Sends the specified file asynchronously using the WebSocket connection.
+      /// </summary>
+      /// <remarks>
+      /// This method does not wait for the send to be complete.
+      /// </remarks>
+      /// <param name="fileInfo">
+      ///   <para>
+      ///   A <see cref="FileInfo"/> that specifies the file to send.
+      ///   </para>
+      ///   <para>
+      ///   The file is sent as the binary data.
+      ///   </para>
+      /// </param>
+      /// <param name="completed">
+      ///   <para>
+      ///   An <c>Action&lt;bool&gt;</c> delegate or <see langword="null"/>
+      ///   if not needed.
+      ///   </para>
+      ///   <para>
+      ///   The delegate invokes the method called when the send is complete.
+      ///   </para>
+      ///   <para>
+      ///   <c>true</c> is passed to the method if the send has done with
+      ///   no error; otherwise, <c>false</c>.
+      ///   </para>
+      /// </param>
+      /// <exception cref="InvalidOperationException">
+      /// The current state of the connection is not Open.
+      /// </exception>
+      /// <exception cref="ArgumentNullException">
+      /// <paramref name="fileInfo"/> is <see langword="null"/>.
+      /// </exception>
+      /// <exception cref="ArgumentException">
+      ///   <para>
+      ///   The file does not exist.
+      ///   </para>
+      ///   <para>
+      ///   -or-
+      ///   </para>
+      ///   <para>
+      ///   The file could not be opened.
+      ///   </para>
+      /// </exception>
+      public void SendAsync (FileInfo fileInfo, Action<bool> completed)
     {
       if (_readyState != WebSocketState.Open) {
         var msg = "The current state of the connection is not Open.";
