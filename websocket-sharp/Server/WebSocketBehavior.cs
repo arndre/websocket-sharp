@@ -963,13 +963,21 @@ namespace WebSocketSharp.Server
       /// </exception>
       protected void Send(FileInfo fileInfo)
       {
-         if (_websocket == null)
+         try
          {
-            var msg = "The current state of the connection is not Open.";
-            throw new InvalidOperationException(msg);
-         }
+            if (_websocket == null)
+            {
+               var msg = "The current state of the connection is not Open.";
+               throw new InvalidOperationException(msg);
+            }
 
-         _websocket.Send(fileInfo);
+            _websocket.Send(fileInfo);
+
+    }
+         catch (Exception ex)
+         {
+
+         }
       }
 
       /// <summary>
@@ -989,13 +997,20 @@ namespace WebSocketSharp.Server
       /// </exception>
       protected void Send(string data)
       {
-         if (_websocket == null)
+         try
          {
-            var msg = "The current state of the connection is not Open.";
-            throw new InvalidOperationException(msg);
-         }
+            if (_websocket == null)
+            {
+               var msg = "The current state of the connection is not Open.";
+               throw new InvalidOperationException(msg);
+            }
 
-         _websocket.Send(data);
+            _websocket.Send(data);
+         }
+         catch (Exception ex)
+         {
+
+         }
       }
 
       /// <summary>
@@ -1038,13 +1053,20 @@ namespace WebSocketSharp.Server
       /// </exception>
       protected void Send(Stream stream, int length)
       {
-         if (_websocket == null)
+         try
          {
-            var msg = "The current state of the connection is not Open.";
-            throw new InvalidOperationException(msg);
-         }
+            if (_websocket == null)
+            {
+               var msg = "The current state of the connection is not Open.";
+               throw new InvalidOperationException(msg);
+            }
 
-         _websocket.Send(stream, length);
+            _websocket.Send(stream, length);
+         }
+         catch (Exception ex)
+         {
+
+         }
       }
 
       /// <summary>
@@ -1078,13 +1100,20 @@ namespace WebSocketSharp.Server
       /// </exception>
       protected void SendAsync(byte[] data, Action<bool> completed)
       {
-         if (_websocket == null)
+         try
          {
-            var msg = "The current state of the connection is not Open.";
-            throw new InvalidOperationException(msg);
-         }
+            if (_websocket == null)
+            {
+               var msg = "The current state of the connection is not Open.";
+               throw new InvalidOperationException(msg);
+            }
 
-         _websocket.SendAsync(data, completed);
+            _websocket.SendAsync(data, completed);
+         }
+         catch (Exception ex)
+         {
+
+         }
       }
       /// <summary>
       /// Sends the specified data to a client asynchronously using a forced 
