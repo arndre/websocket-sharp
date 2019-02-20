@@ -36,6 +36,13 @@
  * - Frank Razenberg <frank@zzattack.org>
  * - David Wood <dpwood@gmail.com>
  * - Liryna <liryna.stark@gmail.com>
+ * 
+ */
+
+
+/*
+ - arno dreschnig, added sendUncompressed
+
  */
 #endregion
 
